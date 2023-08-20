@@ -36,13 +36,13 @@ function getPrimaryEquation() {
   let coastNextText = coastText + "Next\\;\\overline{" + theoryManager.theory.latexSymbol + "}&=&" + pubTau + "\\\\";
 
   let pubTime = theory.upgrades[PUB_TIME_OFFSET + theoryManager.id].level / 10;
-  let coastNextTimeText = coastNextText + "PubTime&=&" + pubTime + "\\\\";
+  let coastNextTimeText = coastNextText + "PubTime&=&" + pubTime.toFixed(2) + "\\\\";
 
   let tauPerH = 0;
   if (pubTime > 0) {
     tauPerH = Math.max(tauPerH, (theoryManager.theory.tau.log10() - theoryManager.theory.tauPublished) / pubTime);
   }
-  return coastNextTimeText + "τ/h&=&" + tauPerH + "\\end{eqnarray}";
+  return coastNextTimeText + "τ/h&=&" + tauPerH.toFixed(2) + "\\end{eqnarray}";
 }
 
 var secondaryEquation = "";
@@ -2420,7 +2420,7 @@ var tick = (elapsedTime, multiplier) => {
     if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.currencies[0].value == 0)
       refreshTheoryManager();
     if (theoryManager.tick(elapsedTime, multiplier)) switchTheory();
-    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level += ~~(elapsedTime * 10);
+    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level += (elapsedTime * 10);
     primaryEquation = "";
     theory.invalidatePrimaryEquation();
     /*
