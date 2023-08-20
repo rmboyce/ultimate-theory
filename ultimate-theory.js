@@ -2350,7 +2350,7 @@ var getUpgradeListDelegate = () => {
       }),
       ui.createSwitch({
         onColor: Color.SWITCH_BACKGROUND,
-        isToggled: () => buyR9.level,
+        isToggled: () => !!buyR9.level,
         onTouched: (e) => {
           if (e.type == TouchType.PRESSED) buyR9.level = (buyR9.level + 1) % 2;
         },
