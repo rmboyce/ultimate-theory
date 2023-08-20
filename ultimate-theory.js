@@ -2379,10 +2379,14 @@ var getUpgradeListDelegate = () => {
     heightRequest: 1,
   });
 
+  let separator2 = ui.createBox({
+    heightRequest: 1,
+  });
+
   let stack = ui.createStackLayout({
     padding: Thickness(0, 3, 0, 0),
     spacing: 3,
-    children: [performTheorySwitchGrid, topGrid, separator, scrollView, separator, autoGrid],
+    children: [performTheorySwitchGrid, topGrid, separator, scrollView, separator2, autoGrid],
   });
 
   return stack;
