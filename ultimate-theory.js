@@ -2362,9 +2362,7 @@ var getUpgradeListDelegate = () => {
         fontSize: 10,
         verticalTextAlignment: TextAlignment.END,
         horizontalTextAlignment: TextAlignment.CENTER,
-        textColor: () => {
-          return buyR9.level ? Color.TEXT : Color.DEACTIVATED_UPGRADE;
-        },
+        textColor: () => Color.TEXT,
       }),
       ui.createSwitch({
         onColor: Color.SWITCH_BACKGROUND,
@@ -2376,17 +2374,38 @@ var getUpgradeListDelegate = () => {
     ],
   });
 
+  let accurateTimeToggle = ui.createStackLayout({
+    children: [
+      ui.createLabel({
+        text: "Acc. t?",
+        fontSize: 10,
+        verticalTextAlignment: TextAlignment.END,
+        horizontalTextAlignment: TextAlignment.CENTER,
+        textColor: () => Color.TEXT,
+      }),
+      ui.createSwitch({
+        onColor: Color.SWITCH_BACKGROUND,
+        isToggled: () => !!accurateTime.level,
+        onTouched: (e) => {
+          if (e.type == TouchType.PRESSED) accurateTime.level = (accurateTime.level + 1) % 2;
+        },
+      }),
+    ],
+  });
+
   reStar.row = 0;
   reStar.column = 0;
   reSigma.row = 0;
   reSigma.column = 1;
   r9toggle.row = 0;
   r9toggle.column = 2;
+  accurateTimeToggle.row = 0;
+  accurateTimeToggle.column = 3;
 
   let autoGrid = ui.createGrid({
     rowDefinitions: [height],
-    columnDefinitions: ["1*", "1*", "50"],
-    children: [reStar, reSigma, r9toggle],
+    columnDefinitions: ["1*", "1*", "50", "50"],
+    children: [reStar, reSigma, r9toggle, accurateTimeToggle],
   });
 
   // Rest
@@ -2420,13 +2439,15 @@ var tick = (elapsedTime, multiplier) => {
     if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.currencies[0].value == 0)
       refreshTheoryManager();
     if (theoryManager.tick(elapsedTime, multiplier)) switchTheory();
-    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level += (elapsedTime * 10);
-    /*
-    primaryEquation = "";
-    theory.invalidatePrimaryEquation();
-    */
-    if (timer <= 0) {
-      timer = 5;
+    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level += elapsedTime * 10;
+    if (accurateTime.level) {
+      // On accurate mode refresh each tick
+      primaryEquation = "";
+      theory.invalidatePrimaryEquation();
+    }
+    else if (timer <= 0) {
+      // Update every 2 minutes on slow mode
+      timer = 120;
     }
   }
 
@@ -2467,6 +2488,8 @@ var tick = (elapsedTime, multiplier) => {
 
   // 10x pub time for each theory
   for (let i = 0; i < 8; i++) theory.createUpgrade(PUB_TIME_OFFSET + i, fictitiousCurrency, new FreeCost());
+
+  accurateTime = theory.createUpgrade(21, fictitiousCurrency, new FreeCost());
 }
 
 refreshTheoryManager(); // Creating theory manager on initialization
