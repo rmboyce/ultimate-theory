@@ -18,7 +18,7 @@ var toBig = (number) => BigNumber.from(number);
 var publicationMultiplier = (theory) => theory.nextPublicationMultiplier / theory.publicationMultiplier;
 
 var primaryEquation = "";
-theory.primaryEquationHeight = 45;
+theory.primaryEquationHeight = 90;
 function getPrimaryEquation() {
   if (primaryEquation != "") return primaryEquation;
 
