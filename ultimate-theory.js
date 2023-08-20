@@ -40,7 +40,7 @@ function getPrimaryEquation() {
 
   let tauPerH = 0;
   if (pubTime > 0) {
-    tauPerH = max(tauPerH, (theoryManager.theory.tau.log10() - theoryManager.theory.tauPublished) / pubTime);
+    tauPerH = Math.max(tauPerH, (theoryManager.theory.tau.log10() - theoryManager.theory.tauPublished) / pubTime);
   }
   return coastNextTimeText + "τ/h&=&" + tauPerH + "\\end{eqnarray}";
 }
