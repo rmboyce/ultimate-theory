@@ -1,21 +1,20 @@
-var id = "ultimate_theory";
+var id = "rmboyce_ultimate_theory";
 var name = "Ultimate Theory";
 var description = "Automates purchases and publications in theories";
 var authors = "rmboyce";
 var version = "0.1";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
+// This code fuses together rus9384's theory automator and the auto student/star allocators of Eaux Tacous#1021's QoL theory
+
 var theoryManager;
 var timer = 0;
-var requirements = [150, 250, 175, 175, 150, 150, 175, 220];
 var R8;
 var R9;
-var test;
 
 var upgradeCost = (upgrade) => upgrade.cost.getCost(upgrade.level);
 var toBig = (number) => BigNumber.from(number);
 var publicationMultiplier = (theory) => theory.nextPublicationMultiplier / theory.publicationMultiplier;
-var getR9 = () => (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
 
 var primaryEquation = "";
 theory.primaryEquationHeight = 45;
@@ -45,57 +44,40 @@ for (let i = 0; i < 8; i++) {
 }
 var getQuaternaryEntries = () => {
   let decay = [
-    30.1935671759384, 37.4972532637665, 30.7608639120181, 44.9544911685781, 39.2687021300084, 102.119195226465,
-    26.7695950304505, 17.6476778516314,
+    28.34271345,
+    37.52553923,
+    31.27668067,
+    44.95569238,
+    40.78375796,
+    93.24066383,
+    27.01228882,
+    17.68654723
   ];
   let timeMult = [1, 10.2, 1, 1.5, 1, 3, 1, 1];
-  let base = [2.59, 11.4, 1.36, 2.85, 44.3, 4.52, 2.15, 4.93];
-
-  let tau;
-  let tauH;
+  let base = [
+    0.143161,
+    4.41361,
+    0.0799692,
+    0.414593,
+    2.33653,
+    2.73498,
+    0.0856023,
+    0.209614,
+  ];
 
   for (let i = 0; i < Math.min(8, game.researchUpgrades[7].level); i++) {
+    let tau;
     try {
       tau = game.theories[i].tauPublished.log10();
     } catch (e) {
       tau = 1;
     }
-    tauH = (base[i] * R9 ** (1 / timeMult[i])) / 2 ** ((tau - requirements[i]) / decay[i]);
+    let tauH = (base[i] * R9 ** (1 / timeMult[i])) / 2 ** ((tau - 300) / decay[i]);
     quaternaryEntries[i].value = formatQValue(tauH);
   }
   for (let i = game.researchUpgrades[7].level; i < 8; i++) {
     quaternaryEntries[i].value = formatQValue(0);
   }
-
-  // T4 low tau check
-  if (game.researchUpgrades[7].level < 4) return quaternaryEntries;
-
-  decay = 27.0085302950228;
-  base = 1.51;
-  timeMult = 1;
-
-  try {
-    tau = game.theories[3].tauPublished.log10();
-  } catch (e) {
-    tau = 1;
-  }
-  tauH = (base * R9 ** (1 / timeMult)) / 2 ** ((tau - requirements[3]) / decay);
-  quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
-
-  // T6 low tau check
-  if (game.researchUpgrades[7].level < 6) return quaternaryEntries;
-
-  decay = 70.0732254255212;
-  base = 7;
-  timeMult = 2;
-
-  try {
-    tau = game.theories[5].tauPublished.log10();
-  } catch (e) {
-    tau = 1;
-  }
-  tauH = (base * R9 ** (1 / timeMult)) / 2 ** ((tau - requirements[5]) / decay);
-  quaternaryEntries[5].value = formatQValue(Math.max(tauH, quaternaryEntries[5].value));
 
   return quaternaryEntries;
 };
@@ -1842,6 +1824,343 @@ class T8 {
   }
 }
 
+class AllocUtils {
+  static simpleStar() {
+    const starUps = Array.from(game.starBonuses).filter((x) => x.id >= 4000 && x.id < 5000 && x.isAvailable);
+    const variables = Array.from(game.variables).filter((x) => x.id > 0 && x.isAvailable);
+
+    starUps.forEach((x) => x.refund(-1));
+
+    const len = Math.min(starUps.length, variables.length);
+
+    let doubleUps = new Set(Array(len).keys());
+    let singleUps = new Set();
+
+    const dThreshold = 0.00001; // 0.001%
+    const sThreshold = dThreshold / 100;
+    const trivialStars = 0.001 * game.starsTotal;
+    const MAX_ITER = 100;
+
+    for (let k = 0; k < MAX_ITER; k++) {
+      let toMove = [];
+      let toDelete = [];
+
+      let best = null;
+      let best2 = null;
+
+      for (const i of doubleUps) {
+        const up = starUps[i];
+
+        up.buy(-1);
+        const maxLevels = up.level;
+        up.refund(-1);
+
+        const doubleLevels = this.nextDouble(variables[i].level);
+
+        if (maxLevels < doubleLevels) {
+          toMove.push(i);
+          continue;
+        }
+
+        const dumpLevels = maxLevels - this.lastDouble(variables[i].level + maxLevels);
+
+        let cost = up.currency.value;
+        up.buy(dumpLevels);
+        cost -= up.currency.value;
+        let dx = game.x;
+        up.refund(dumpLevels);
+        dx -= game.x;
+
+        if (dx < dThreshold * game.x) {
+          toDelete.push(i);
+          continue;
+        }
+
+        if (best == null || best.dx * cost < dx * best.cost) {
+          best2 = best;
+          best = {
+            isDouble: true,
+            i: i,
+            dx: dx,
+            cost: cost,
+            cnt: dumpLevels,
+          };
+        } else if (best2 == null || best2.dx * cost < dx * best2.cost) {
+          best2 = {
+            isDouble: true,
+            i: i,
+            dx: dx,
+            cost: cost,
+            cnt: dumpLevels,
+          };
+        }
+      }
+
+      toMove.forEach((i) => {
+        doubleUps.delete(i);
+        singleUps.add(i);
+      });
+      toDelete.forEach((i) => {
+        doubleUps.delete(i);
+      });
+      toDelete = [];
+
+      for (const i of singleUps) {
+        const up = starUps[i];
+        const cost = up.cost.getCost(up.level);
+
+        if (cost > up.currency.value) {
+          toDelete.push(i);
+          continue;
+        }
+
+        up.buy(1);
+        let dx = game.x;
+        up.refund(1);
+        dx -= game.x;
+
+        if (dx < sThreshold * game.x) {
+          toDelete.push(i);
+          continue;
+        }
+
+        if (best == null || best.dx * cost < dx * best.cost) {
+          best2 = best;
+          best = {
+            isDouble: false,
+            i: i,
+            dx: dx,
+            cost: cost,
+            cnt: 1,
+          };
+        } else if (best2 == null || best2.dx * cost < dx * best2.cost) {
+          best2 = {
+            isDouble: false,
+            i: i,
+            dx: dx,
+            cost: cost,
+            cnt: 1,
+          };
+        }
+      }
+
+      toDelete.forEach((i) => {
+        singleUps.delete(i);
+      });
+
+      if (best == null) break;
+
+      if (best.isDouble) {
+        starUps[best.i].buy(best.cnt);
+        doubleUps.delete(best.i);
+        singleUps.add(best.i);
+      } else if (best2 == null) {
+        starUps[best.i].buy(-1);
+        singleUps.delete(best.i);
+      } else {
+        const bestup = starUps[best.i];
+        let cost = best.cost;
+        let dx = best.dx;
+        for (let i = 0; i < MAX_ITER; i++) {
+          bestup.buy(1);
+
+          cost = bestup.cost.getCost(bestup.level);
+          if (cost > bestup.currency.value) break;
+          // mitigate edge cases where we have a cheap variable competing with an expensive one.
+          if (cost < trivialStars) continue;
+
+          bestup.buy(1);
+          dx = game.x;
+          bestup.refund(1);
+          dx -= game.x;
+
+          if (best2.dx * cost > dx * best2.cost) break;
+        }
+      }
+    }
+  }
+
+  static nextDouble(level) {
+    if (level >= 24000) return 400 - (level % 400);
+    if (level >= 10000) return 200 - (level % 200);
+    if (level >= 6000) return 100 - (level % 100);
+    if (level >= 1500) return 50 - (level % 50);
+    if (level >= 10) return 25 - (level % 25);
+    return 10 - level;
+  }
+
+  static lastDouble(level) {
+    if (level >= 24000) return level % 400;
+    if (level >= 10000) return level % 200;
+    if (level >= 6000) return level % 100;
+    if (level >= 1500) return level % 50;
+    if (level >= 25) return level % 25;
+    if (level >= 10) return level - 10;
+    return level;
+  }
+
+  static simpleStudent() {
+    // number of purchases to backtrack and brute force; 4 if gradf < ee30k, 10 otherwise
+    // const REFUND_CNT = game.statistics.graduationF < BigNumber.fromComponents(1, 2, 29994) ? 4 : 10;
+
+    const upgrades = Array.from(game.researchUpgrades).filter((x) => x.id <= 101 && x.isAvailable);
+    upgrades.forEach((x) => x.refund(-1));
+
+    if (state.useR9) game.researchUpgrades[8].buy(-1);
+    else game.researchUpgrades[8].refund(-1);
+
+    const maxLevels = upgrades.map((x) => x.maxLevel);
+    const expIndex = upgrades.length - 1;
+    let levels = upgrades.map((x) => x.level);
+
+    let sigma = game.sigma.toNumber();
+
+    let curSum = BigNumber.ZERO;
+    let history = [];
+
+    // edit in case of emergency
+    const vals = [
+      (game.dt * game.acceleration * (game.isRewardActive ? 1.5 : 1)).log(),
+      (1 + game.t).log() * 0.7,
+      (1 + game.starsTotal).log(),
+      (1 + game.db).log() / (100 * (10 + game.db).log10()).sqrt(),
+      (1 + game.dmu).log() / 1300,
+      ((1 + game.dpsi).log() / 255) * (10 + game.dpsi).log10().sqrt(),
+    ].map((v) => v.toNumber());
+
+    while (true) {
+      let cand = null;
+      let cval = BigNumber.ZERO;
+
+      for (let i = 0; i < upgrades.length; i++) {
+        if (levels[i] >= maxLevels[i]) continue;
+
+        const cost = i == expIndex ? 2 : this.researchCost(levels[i]);
+        const curval = i == expIndex ? curSum / 20 : vals[i] / cost;
+
+        if (curval > cval) {
+          cand = cost <= sigma ? i : null; // flag if best is unreachable.
+          cval = curval;
+        }
+      }
+
+      if (cand == null) break;
+
+      history.push(cand);
+      if (cand == expIndex) {
+        sigma -= 2;
+      } else {
+        curSum += vals[cand];
+        sigma -= this.researchCost(levels[cand]);
+      }
+      levels[cand] += 1;
+    }
+
+    while (history.length > 0) {
+      let pool = 1;
+      let dims = 0;
+
+      for (let i = 0; i < upgrades.length; i++) {
+        if (levels[i] >= maxLevels[i]) continue;
+        let more = i == expIndex ? Math.floor(sigma / 2) : this.maxPurchaseCount(levels[i], sigma);
+        pool *= Math.min(more, maxLevels[i] - levels[i]) + 1;
+        dims += 1;
+      }
+
+      const heur = dims < 6 ? pool / 3 : pool / (dims == 6 ? 20 : 60);
+
+      if (heur > this.MAX_DFS_SIZE) break;
+
+      const lastbest = history.pop();
+
+      if (lastbest == expIndex) {
+        levels[lastbest] -= 1;
+        sigma += 2;
+      } else {
+        const lastlevel = levels[lastbest] - 1;
+        const lastcost = this.researchCost(lastlevel);
+        levels[lastbest] -= 1;
+        sigma += lastcost;
+        curSum -= vals[lastbest];
+      }
+    }
+
+    let search = (i, sigma, curSum) => {
+      // TODO un-reuse variables
+      if (i == expIndex) {
+        const cnt = Math.min((levels[i] + sigma / 2) >> 0, 6);
+        return { cnt: [cnt], maxSum: curSum * (1 + cnt / 10) };
+      }
+      let maxres = null;
+      for (let j = levels[i]; j <= maxLevels[i]; j++) {
+        let res = search(i + 1, sigma, curSum);
+        if (maxres == null || res.maxSum >= maxres.maxSum) {
+          maxres = res;
+          maxres.cnt.push(j);
+        }
+        sigma -= this.researchCost(j);
+        if (sigma < 0) break;
+        curSum += vals[i];
+      }
+      return maxres;
+    };
+
+    const found = search(0, sigma, curSum);
+    for (let i = 0; i <= expIndex; i++) upgrades[i].buy(found.cnt[expIndex - i]);
+  }
+
+  static researchCost(curLevel) {
+    return Math.floor(curLevel / 2 + 1);
+  }
+
+  static maxPurchaseCount(curLevel, sigma) {
+    let levels = 0;
+
+    if (this.researchCost(curLevel) > sigma) return levels;
+
+    if (curLevel % 2 == 1) {
+      sigma -= this.researchCost(curLevel);
+      curLevel += 1;
+      levels += 1;
+    }
+
+    curLevel += 1;
+    const bulks = Math.floor((-curLevel + Math.sqrt(curLevel * curLevel + 4 * sigma)) / 2);
+
+    sigma -= bulks * (curLevel + bulks);
+    curLevel += 2 * bulks - 1;
+    levels += 2 * bulks;
+
+    if (this.researchCost(curLevel) <= sigma) {
+      levels += 1;
+    }
+
+    return levels;
+  }
+
+  static debugSimpleStudentSnapshot() {
+    let output = {};
+    output.sigma = game.sigma.toNumber();
+    output.useR9 = state.useR9;
+    Array.from(game.researchUpgrades).forEach((x) => {
+      output[x.id] = x.level;
+    });
+    return JSON.stringify(output);
+  }
+
+  static debugSimpleStudentPopup(debugTexts) {
+    const output = debugTexts.join("\n");
+    const popup = ui.createPopup({
+      title: "STUDENT ERROR",
+      content: ui.createStackLayout({
+        children: [ui.createLabel({ text: output }), ui.createEntry({ placeholder: output })],
+      }),
+    });
+    popup.show();
+  }
+}
+AllocUtils.MAX_DFS_SIZE = 300;
+
 class UIutils {
   static createLatexButton(header, variable, id = -1) {
     let labelLeft = ui.createLatexLabel({
@@ -1883,11 +2202,10 @@ class UIutils {
     buttonFrame.onTouched = (touchEvent) => {
       if (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED) {
         variable.level = (variable.level + 1) % 2;
-        if (id >= 0 && game.theories[id].tau.log10() < requirements[id]) {
+        if (id >= 0 && game.theories[id].tau.log10() < 300) {
           variable.level = 0;
           timer = 5;
-          primaryEquation =
-            "Theory\\; " + (id + 1) + "\\; requires\\; " + requirements[id] + "\\; " + game.theories[id].latexSymbol;
+          primaryEquation = "Requires\\; 300\\; " + game.theories[id].latexSymbol;
           theory.invalidatePrimaryEquation();
         }
 
@@ -1955,6 +2273,7 @@ class UIutils {
 }
 
 var getUpgradeListDelegate = () => {
+  // Auto theory management buttons
   let performTheorySwitchButton = UIutils.createTheorySwitchButton();
 
   let height = ui.screenHeight * 0.055;
@@ -1992,6 +2311,7 @@ var getUpgradeListDelegate = () => {
     ],
   });
 
+  // Auto theory activation for each theory buttons
   buttonArray = [];
   for (let i = 0; i < 8; i++) {
     let newButton = UIutils.createLatexButton("Theory " + (i + 1), theory.upgrades[i], i);
@@ -2007,6 +2327,50 @@ var getUpgradeListDelegate = () => {
     children: buttonArray,
   });
 
+  // Auto allocation of stars/students buttons
+  let reStar = ui.createButton({
+    text: "Reallocate ★",
+    onClicked: () => AllocUtils.simpleStar(),
+  });
+  let reSigma = ui.createButton({
+    text: "Reallocate σ",
+    onClicked: () => AllocUtils.simpleStudent(),
+  });
+
+  let r9toggle = ui.createStackLayout({
+    children: [
+      ui.createLabel({
+        text: "Buy R9?",
+        fontSize: 10,
+        verticalTextAlignment: TextAlignment.END,
+        horizontalTextAlignment: TextAlignment.CENTER,
+        textColor: () => {
+          return buyR9.level ? Color.TEXT : Color.DEACTIVATED_UPGRADE;
+        },
+      }),
+      ui.createSwitch({
+        onColor: Color.SWITCH_BACKGROUND,
+        isToggled: () => buyR9.level,
+        onTouched: (e) => {
+          if (e.type == TouchType.PRESSED) buyR9.level = (buyR9.level + 1) % 2;
+        },
+      }),
+    ],
+  });
+
+  reStar.row = 0;
+  reStar.column = 0;
+  reSigma.row = 0;
+  reSigma.column = 1;
+  r9toggle.row = 0;
+  r9toggle.column = 2;
+
+  let autoGrid = ui.createGrid({
+    columnDefinitions: ["1*", "1*", "50"],
+    children: [reStar, reSigma, r9toggle],
+  });
+
+  // Rest
   let scrollView = ui.createScrollView({
     content: bottomGrid,
   });
@@ -2018,7 +2382,7 @@ var getUpgradeListDelegate = () => {
   let stack = ui.createStackLayout({
     padding: Thickness(0, 3, 0, 0),
     spacing: 3,
-    children: [performTheorySwitchGrid, topGrid, separator, scrollView],
+    children: [performTheorySwitchGrid, topGrid, separator, scrollView, separator, autoGrid],
   });
 
   return stack;
@@ -2044,7 +2408,7 @@ var tick = (elapsedTime, multiplier) => {
   }
 
   let newR8 = game.researchUpgrades[7].level;
-  let newR9 = getR9();
+  let newR9 = (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
   if (R8 !== newR8 || R9 !== newR9) {
     R8 = newR8;
     R9 = newR9;
@@ -2066,6 +2430,8 @@ var tick = (elapsedTime, multiplier) => {
   enablePublications = theory.createUpgrade(10, fictitiousCurrency, new FreeCost());
 
   enableTheorySwitch = theory.createUpgrade(11, fictitiousCurrency, new FreeCost());
+
+  buyR9 = theory.createUpgrade(12, fictitiousCurrency, new FreeCost());
 }
 
 refreshTheoryManager(); // creating theory manager on initialization
