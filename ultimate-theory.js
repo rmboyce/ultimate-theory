@@ -1,12 +1,13 @@
 var id = "rmboyce_ultimate_theory";
 var name = "Ultimate Theory";
-var description = "Automates purchases and publications in theories";
+var description = "This theory fuses together rus9384's theory automator and the auto student/star allocators of Eaux Tacous#1021's QoL theory";
 var authors = "rmboyce";
 var version = "0.1";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
-// This code fuses together rus9384's theory automator and the auto student/star allocators of Eaux Tacous#1021's QoL theory
+// This theory fuses together rus9384's theory automator and the auto student/star allocators of Eaux Tacous#1021's QoL theory
 
+const PUB_TIME_OFFSET = 13;
 var theoryManager;
 var timer = 0;
 var R8;
@@ -32,7 +33,16 @@ function getPrimaryEquation() {
   if (theoryManager.id == 1) pubTau = theoryManager.theory.tauPublished * theoryManager.pub ** (1 / 0.198);
   else if (theoryManager.id == 2) pubTau = theoryManager.theory.tauPublished * theoryManager.pub ** (1 / 0.147);
 
-  return coastText + "Next\\;\\overline{" + theoryManager.theory.latexSymbol + "}&=&" + pubTau + "\\end{eqnarray}";
+  let coastNextText = coastText + "Next\\;\\overline{" + theoryManager.theory.latexSymbol + "}&=&" + pubTau + "\\\\";
+
+  let pubTime = theory.upgrades[PUB_TIME_OFFSET + theoryManager.id].level / 10;
+  let coastNextTimeText = coastNextText + "PubTime&=&" + pubTime + "\\\\";
+
+  let tauPerH = 0;
+  if (pubTime > 0) {
+    tauPerH = max(tauPerH, (theoryManager.theory.tau.log10() - theoryManager.theory.tauPublished) / pubTime);
+  }
+  return coastNextTimeText + "τ/h&=&" + tauPerH + "\\end{eqnarray}";
 }
 
 var secondaryEquation = "";
@@ -316,6 +326,7 @@ class T1 {
 
     if (enablePublications.level && this.theory.tau > this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -459,6 +470,7 @@ class T2 {
 
     if (enablePublications.level && publicationMultiplier(this.theory) > this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -775,6 +787,7 @@ class T3 {
 
     if (enablePublications.level && publicationMultiplier(this.theory) > this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -1006,6 +1019,7 @@ class T4 {
 
     if (enablePublications.level && this.theory.tau >= this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -1252,6 +1266,7 @@ class T5 {
 
     if (enablePublications.level && this.theory.tau >= this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -1493,6 +1508,7 @@ class T6 {
 
     if (enablePublications.level && this.theory.tau >= this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -1667,6 +1683,7 @@ class T7 {
 
     if (enablePublications.level && this.theory.tau >= this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -1812,6 +1829,7 @@ class T8 {
 
     if (enablePublications.level && this.theory.tau >= this.pub) {
       game.activeTheory.publish();
+      theory.upgrades[PUB_TIME_OFFSET + this.id].level = 0;
       return true;
     }
 
@@ -2366,6 +2384,7 @@ var getUpgradeListDelegate = () => {
   r9toggle.column = 2;
 
   let autoGrid = ui.createGrid({
+    padding: Thickness(10, 2, 10, 2),
     columnDefinitions: ["1*", "1*", "50"],
     children: [reStar, reSigma, r9toggle],
   });
@@ -2386,7 +2405,7 @@ var getUpgradeListDelegate = () => {
   let stack = ui.createStackLayout({
     padding: Thickness(0, 3, 0, 0),
     spacing: 3,
-    children: [performTheorySwitchGrid, topGrid, separator, scrollView, separator2, autoGrid],
+    children: [performTheorySwitchGrid, autoGrid, separator, topGrid, separator2, scrollView],
   });
 
   return stack;
@@ -2401,6 +2420,7 @@ var tick = (elapsedTime, multiplier) => {
     if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.currencies[0].value == 0)
       refreshTheoryManager();
     if (theoryManager.tick(elapsedTime, multiplier)) switchTheory();
+    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level += elapsedTime * 10;
   }
 
   if (timer > 0) {
@@ -2420,7 +2440,7 @@ var tick = (elapsedTime, multiplier) => {
   }
 };
 
-// creating theory settings
+// Creating theory settings
 {
   fictitiousCurrency = theory.createCurrency();
 
@@ -2435,7 +2455,11 @@ var tick = (elapsedTime, multiplier) => {
 
   enableTheorySwitch = theory.createUpgrade(11, fictitiousCurrency, new FreeCost());
 
+  // Auto star/student upgrades
   buyR9 = theory.createUpgrade(12, fictitiousCurrency, new FreeCost());
+
+  // 10x pub time for each theory
+  for (let i = 0; i < 8; i++) theory.createUpgrade(PUB_TIME_OFFSET + i, fictitiousCurrency, new FreeCost());
 }
 
-refreshTheoryManager(); // creating theory manager on initialization
+refreshTheoryManager(); // Creating theory manager on initialization
