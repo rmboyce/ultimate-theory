@@ -2422,6 +2422,7 @@ var tick = (elapsedTime, multiplier) => {
     if (theoryManager.tick(elapsedTime, multiplier)) switchTheory();
     theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level =
     theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level + ~~(elapsedTime * 10);
+    timer = 5;
   }
 
   if (timer > 0) {
