@@ -16,6 +16,21 @@ var R9;
 var upgradeCost = (upgrade) => upgrade.cost.getCost(upgrade.level);
 var toBig = (number) => BigNumber.from(number);
 var publicationMultiplier = (theory) => theory.nextPublicationMultiplier / theory.publicationMultiplier;
+var convertTime = (secs) => {
+  let mins = Math.floor((secs / 60) % 60);
+  let hrs = Math.floor((secs / 3600) % 24);
+  let days = Math.floor((secs / 86400) % 365);
+  let years = Math.floor(secs / 31536000);
+  let result = "";
+  if (years > 0) {
+    result += years < 1e6 ? years : logToExp(Math.log10(years));
+    result += "y";
+  }
+  if (days > 0) result += days + "d";
+  result += hrs + "h";
+  if (years === 0) result += mins + "m";
+  return result;
+};
 
 var primaryEquation = "";
 theory.primaryEquationHeight = 90;
@@ -35,14 +50,10 @@ function getPrimaryEquation() {
 
   let coastNextText = coastText + "Next\\;\\overline{" + theoryManager.theory.latexSymbol + "}&=&" + pubTau + "\\\\";
 
-  let pubTime = theory.upgrades[PUB_TIME_OFFSET + theoryManager.id].level / 10;
-  let coastNextTimeText = coastNextText + "PubTime&=&" + pubTime.toFixed(2) + "\\\\";
+  let cnStartText = coastNextText + "Start\\;" + theoryManager.theory.latexSymbol + "&=&" + theoryManager.theory.tauPublished + "\\\\";
 
-  let tauPerH = 0;
-  if (pubTime > 0) {
-    tauPerH = Math.max(0, (theoryManager.theory.tau.log10() - theoryManager.theory.tauPublished.log10()) / pubTime);
-  }
-  return coastNextTimeText + "τ/h&=&" + tauPerH.toFixed(2) + "\\end{eqnarray}";
+  let pubTime = theory.upgrades[PUB_TIME_OFFSET + theoryManager.id].level / 10;
+  return cnStartText + "PubTime&=&\\text{" + convertTime(pubTime) + "}\\end{eqnarray}";
 }
 
 var secondaryEquation = "";
