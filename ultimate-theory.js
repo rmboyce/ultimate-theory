@@ -2420,9 +2420,10 @@ var tick = (elapsedTime, multiplier) => {
     if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.currencies[0].value == 0)
       refreshTheoryManager();
     if (theoryManager.tick(elapsedTime, multiplier)) switchTheory();
-    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level =
-    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level + 10;//~~(elapsedTime * 10);
-    timer = 5;
+    theory.upgrades[PUB_TIME_OFFSET + game.activeTheory.id].level += elapsedTime * 10;
+    if (timer <= 0) {
+      timer = 5;
+    }
   }
 
   if (timer > 0) {
