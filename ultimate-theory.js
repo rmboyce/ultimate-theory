@@ -2006,7 +2006,7 @@ class AllocUtils {
     const upgrades = Array.from(game.researchUpgrades).filter((x) => x.id <= 101 && x.isAvailable);
     upgrades.forEach((x) => x.refund(-1));
 
-    if (state.useR9) game.researchUpgrades[8].buy(-1);
+    if (buyR9.level) game.researchUpgrades[8].buy(-1);
     else game.researchUpgrades[8].refund(-1);
 
     const maxLevels = upgrades.map((x) => x.maxLevel);
@@ -2141,7 +2141,7 @@ class AllocUtils {
   static debugSimpleStudentSnapshot() {
     let output = {};
     output.sigma = game.sigma.toNumber();
-    output.useR9 = state.useR9;
+    output.useR9 = !!buyR9.level;
     Array.from(game.researchUpgrades).forEach((x) => {
       output[x.id] = x.level;
     });
