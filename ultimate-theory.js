@@ -2229,7 +2229,7 @@ class UIutils {
     });
 
     buttonFrame.onTouched = (touchEvent) => {
-      if (unlockTA.level && (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED)) {
+      if (!lockTA.level && (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED)) {
         variable.level = (variable.level + 1) % 2;
         if (id >= 0 && game.theories[id].tau.log10() < 300) {
           variable.level = 0;
@@ -2385,7 +2385,7 @@ var getUpgradeListDelegate = () => {
     ],
   });
 
-  let unlockTAtoggle = ui.createStackLayout({
+  let lockTAtoggle = ui.createStackLayout({
     children: [
       ui.createLabel({
         text: "Lock TA?",
@@ -2396,25 +2396,27 @@ var getUpgradeListDelegate = () => {
       }),
       ui.createSwitch({
         onColor: Color.SWITCH_BACKGROUND,
-        isToggled: () => !!unlockTA.level,
+        isToggled: () => !!lockTA.level,
         onTouched: (e) => {
-          if (e.type == TouchType.PRESSED) unlockTA.level = (unlockTA.level + 1) % 2;
+          if (e.type == TouchType.PRESSED) lockTA.level = (lockTA.level + 1) % 2;
         },
       }),
     ],
   });
 
+  lockTAtoggle.row = 0;
+  lockTAtoggle.col = 0;
   reStar.row = 0;
-  reStar.column = 0;
+  reStar.column = 1;
   reSigma.row = 0;
-  reSigma.column = 1;
+  reSigma.column = 2;
   r9toggle.row = 0;
-  r9toggle.column = 2;
+  r9toggle.column = 3;
 
   let autoGrid = ui.createGrid({
     rowDefinitions: [height],
-    columnDefinitions: ["1*", "1*", "50", "50"],
-    children: [reStar, reSigma, r9toggle, unlockTAtoggle],
+    columnDefinitions: ["50", "1*", "1*", "50"],
+    children: [lockTAtoggle, reStar, reSigma, r9toggle],
   });
 
   // Rest
@@ -2494,7 +2496,7 @@ var tick = (elapsedTime, multiplier) => {
   for (let i = 0; i < 8; i++) theory.createUpgrade(PUB_TIME_OFFSET + i, fictitiousCurrency, new FreeCost());
 
   // Theory automator toggle switch
-  unlockTA = theory.createUpgrade(21, fictitiousCurrency, new FreeCost());
+  lockTA = theory.createUpgrade(21, fictitiousCurrency, new FreeCost());
 }
 
 refreshTheoryManager(); // Creating theory manager on initialization
