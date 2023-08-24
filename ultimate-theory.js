@@ -2494,7 +2494,7 @@ var tick = (elapsedTime, multiplier) => {
   for (let i = 0; i < 8; i++) theory.createUpgrade(PUB_TIME_OFFSET + i, fictitiousCurrency, new FreeCost());
 
   // Theory automator toggle switch
-  unlockTA = theory.createUpgrade(20, fictitiousCurrency, new FreeCost());
+  unlockTA = theory.createUpgrade(21, fictitiousCurrency, new FreeCost());
 }
 
 refreshTheoryManager(); // Creating theory manager on initialization
