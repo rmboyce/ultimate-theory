@@ -209,8 +209,8 @@ class T1 {
     let mult = diff < 3 ? 100 : diff < 5 ? 0.015 : 0.00014;
     this.pub = this.c4NC * mult;
 
-    this.coast = (diff < 3 ? this.c4_nc : toBig(10).pow(this.lastPub.log10().floor())) * 30;
-    this.coast = this.coast * toBig(10).pow((this.pub / this.coast).log10().floor());
+    mult = diff < toBig(3) ? toBig(30) : diff < toBig(5) ? toBig(0.003) : toBig(0.00003);
+		this.coast = this.c4NC * mult;
   }
 
   upgradeByIndex(upgradeIndex) {
@@ -2229,7 +2229,7 @@ class UIutils {
     });
 
     buttonFrame.onTouched = (touchEvent) => {
-      if (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED) {
+      if (unlockTA && (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED)) {
         variable.level = (variable.level + 1) % 2;
         if (id >= 0 && game.theories[id].tau.log10() < 300) {
           variable.level = 0;
@@ -2385,6 +2385,25 @@ var getUpgradeListDelegate = () => {
     ],
   });
 
+  let unlockTAtoggle = ui.createStackLayout({
+    children: [
+      ui.createLabel({
+        text: "Lock TA?",
+        fontSize: 10,
+        verticalTextAlignment: TextAlignment.END,
+        horizontalTextAlignment: TextAlignment.CENTER,
+        textColor: () => Color.TEXT,
+      }),
+      ui.createSwitch({
+        onColor: Color.SWITCH_BACKGROUND,
+        isToggled: () => !!unlockTA.level,
+        onTouched: (e) => {
+          if (e.type == TouchType.PRESSED) unlockTA.level = (unlockTA.level + 1) % 2;
+        },
+      }),
+    ],
+  });
+
   reStar.row = 0;
   reStar.column = 0;
   reSigma.row = 0;
@@ -2394,8 +2413,8 @@ var getUpgradeListDelegate = () => {
 
   let autoGrid = ui.createGrid({
     rowDefinitions: [height],
-    columnDefinitions: ["1*", "1*", "50"],
-    children: [reStar, reSigma, r9toggle],
+    columnDefinitions: ["1*", "1*", "50", "50"],
+    children: [reStar, reSigma, r9toggle, unlockTAtoggle],
   });
 
   // Rest
@@ -2468,11 +2487,14 @@ var tick = (elapsedTime, multiplier) => {
 
   enableTheorySwitch = theory.createUpgrade(11, fictitiousCurrency, new FreeCost());
 
-  // Auto star/student upgrades
+  // Auto star/student upgrades R9 switch
   buyR9 = theory.createUpgrade(12, fictitiousCurrency, new FreeCost());
 
   // 10x pub time for each theory
   for (let i = 0; i < 8; i++) theory.createUpgrade(PUB_TIME_OFFSET + i, fictitiousCurrency, new FreeCost());
+
+  // Theory automator toggle switch
+  unlockTA = theory.createUpgrade(20, fictitiousCurrency, new FreeCost());
 }
 
 refreshTheoryManager(); // Creating theory manager on initialization
