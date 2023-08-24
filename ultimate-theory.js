@@ -2229,7 +2229,7 @@ class UIutils {
     });
 
     buttonFrame.onTouched = (touchEvent) => {
-      if (unlockTA && (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED)) {
+      if (unlockTA.level && (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED)) {
         variable.level = (variable.level + 1) % 2;
         if (id >= 0 && game.theories[id].tau.log10() < 300) {
           variable.level = 0;
